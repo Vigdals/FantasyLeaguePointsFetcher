@@ -6,11 +6,7 @@ using System.Threading.Tasks;
 
 namespace FantasyLeaguePointsFetcher.Models
 {
-    internal class PlayerModel
+    internal class PlayerHistoryModel
     {
-        public int entry { get; set; }
-        public string player_name { get; set; }
-        public string entry_name { get; set;}
-
     }
 }
