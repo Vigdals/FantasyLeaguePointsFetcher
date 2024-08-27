@@ -11,6 +11,12 @@ namespace FantasyLeaguePointsFetcher.Models
         public int entry { get; set; }
         public string player_name { get; set; }
         public string entry_name { get; set;}
+       //public List<GWScores> GWScores { get; set; }
+
+        public class GWScores
+        {
+
+        }
 
     }
 }

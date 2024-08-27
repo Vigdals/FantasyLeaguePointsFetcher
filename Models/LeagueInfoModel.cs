@@ -39,15 +39,15 @@ public class Result
     public string entry_name { get; set; }
 }
 
-public class Root
+public class Root2
 {
     public NewEntries new_entries { get; set; }
     public DateTime last_updated_data { get; set; }
     public League league { get; set; }
-    public Standings standings { get; set; }
+    public Result standings { get; set; }
 }
 
-public class Standings
+public class Results
 {
     public bool has_next { get; set; }
     public int page { get; set; }
