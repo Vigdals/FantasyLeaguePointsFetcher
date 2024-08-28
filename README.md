@@ -1,5 +1,6 @@
 ## General info
-Take data from FPL API. Fetches data from Luster FPL league and gets players and GW points. Puts those into an hardcoded Excel sheet. 
+Gets data from [FPL API](https://fantasy.premierleague.com/api/bootstrap-static/). 
+Fetches data from the Luster FPL league. Both players and GW points. Puts those into an hardcoded Excel sheet. 
 ## Maintainers
 *  [Adrian](https://github.com/vigdals)
 ## License
