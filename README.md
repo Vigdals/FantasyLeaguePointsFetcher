@@ -1,6 +1,6 @@
 ## General info
-Just a small app that fetches data from FPL api and puts it into my Excel sheet
+Take data from FPL API. Fetches data from Luster FPL league and gets players and GW points. Puts those into an hardcoded Excel sheet. 
 ## Maintainers
-* [Adrian](https://github.com/vigdals)
+*  [Adrian](https://github.com/vigdals)
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
