@@ -2,22 +2,26 @@
 using System.Text.Json;
 using FantasyLeaguePointsFetcher.Models;
 using FantasyLeaguePointsFetcher.Resources;
+using OfficeOpenXml;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 var LigaInfo = await GetLeagueInfo();
 
-//for kvar deltakar i liga, hent ut GW score
-foreach (var deltakar in LigaInfo)
-{
-    Debug.WriteLine(deltakar.player_name + ":");
-    //Henter ut GW data for gitt player
-    var PlayerInfo = await GetPlayerInfo(deltakar.entry);
+// sort fplPlayerList aplhabetically
+LigaInfo = LigaInfo.OrderBy(p => p.player_name).ToList();
 
-    foreach (var info in PlayerInfo) Debug.WriteLine("GW" + info.@event + " " + info.points);
-}
+// for kvar deltakar i liga, hent ut GW score
+//foreach (var deltakar in LigaInfo)
+//{
+//    Debug.WriteLine(deltakar.player_name + ":");
+//    // Henter ut GW data for gitt player
+//    var PlayerInfo = await GetPlayerInfo(deltakar.entry);
 
-
-
-
+//    foreach (var info in PlayerInfo) Debug.WriteLine("GW" + info.@event + " " + info.points);
+//}
 
 async Task<List<Result>> GetLeagueInfo()
 {
@@ -80,4 +84,45 @@ async Task<List<Current>> GetPlayerInfo(int lagID)
     }
 
     return fplPlayerList;
+}
+
+try
+{
+    // Open the existing workbook
+    string filePath = "C:\\GitHub\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
+    using (var package = new ExcelPackage(new FileInfo(filePath)))
+    {
+        var worksheet = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Utrekning");
+
+        if (worksheet == null)
+        {
+            // If the worksheet doesn't exist, create a new one
+            worksheet = package.Workbook.Worksheets.Add("Utrekning");
+        }
+
+        int row = 4; // Start at row 4
+        int cells = 3; // Starts at cell 4
+
+        // Write data to Excel sheet
+        foreach (var deltakar in LigaInfo)
+        {
+            // Write player info for each entry
+            var PlayerInfo = await GetPlayerInfo(deltakar.entry);
+            foreach (var info in PlayerInfo)
+            {
+                var gw = info.@event;
+                worksheet.Cells[row, gw+2].Value = info.points;
+            }
+            row++;
+        }
+
+        // Save changes to the existing file
+        package.Save();
+    }
+
+    Console.WriteLine("Data has been appended to FPL Luster totaloversikt.xlsx");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"An error occurred: {ex.Message}");
 }
