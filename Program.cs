@@ -6,6 +6,7 @@ using OfficeOpenXml;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 var LigaInfo = await GetLeagueInfo();
@@ -89,32 +90,36 @@ async Task<List<Current>> GetPlayerInfo(int lagID)
 try
 {
     // Open the existing workbook
-    string filePath = "C:\\GitHub\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
+    var filePath = "C:\\GitHub\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
     using (var package = new ExcelPackage(new FileInfo(filePath)))
     {
+        // --- UTREKNING SHEET --- 
         var worksheet = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Utrekning");
 
         if (worksheet == null)
-        {
             // If the worksheet doesn't exist, create a new one
             worksheet = package.Workbook.Worksheets.Add("Utrekning");
-        }
 
-        int row = 4; // Start at row 4
-        int cells = 3; // Starts at cell 4
+        var row = 4; // Start at row 4
+        var cells = 3; // Starts at cell 3
 
-        // Write data to Excel sheet
+        // Write data to Utrekning sheet
         foreach (var deltakar in LigaInfo)
         {
             // Write player info for each entry
             var PlayerInfo = await GetPlayerInfo(deltakar.entry);
             foreach (var info in PlayerInfo)
             {
+                //sets the gameweek as an int for incrementing the gameweeks
                 var gw = info.@event;
-                worksheet.Cells[row, gw+2].Value = info.points;
+                worksheet.Cells[row, gw + 2].Value = info.points;
             }
+
             row++;
         }
+
+        // --- GW Oversikt sheet ---
+
 
         // Save changes to the existing file
         package.Save();
