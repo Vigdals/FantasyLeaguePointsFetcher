@@ -2,20 +2,19 @@
 using System.Text.Json;
 using FantasyLeaguePointsFetcher.Models;
 using FantasyLeaguePointsFetcher.Resources;
-using OfficeOpenXml.FormulaParsing.Logging;
-using static Microsoft.IO.RecyclableMemoryStreamManager;
 
 var LigaInfo = await GetLeagueInfo();
 
 //for kvar deltakar i liga, hent ut GW score
 foreach (var deltakar in LigaInfo)
 {
+    Debug.WriteLine(deltakar.player_name + ":");
+    //Henter ut GW data for gitt player
     var PlayerInfo = await GetPlayerInfo(deltakar.entry);
 
-    Debug.WriteLine(PlayerInfo);
+    foreach (var info in PlayerInfo) Debug.WriteLine("GW" + info.@event + " " + info.points);
 }
 
-Debug.WriteLine("");
 
 
 
@@ -26,23 +25,21 @@ async Task<List<Result>> GetLeagueInfo()
     var fplTeamsInLeagueList = new List<Result>();
 
     //Hardkoda standings url for Luster FPL
-    string apiLeagueStandings = "https://fantasy.premierleague.com/api/leagues-classic/1008641/standings/";
+    var apiLeagueStandings = "https://fantasy.premierleague.com/api/leagues-classic/1008641/standings/";
     var jsonResult = await ApiCall.DoApiCallAsync(apiLeagueStandings);
 
     //Deserialiserer json og henter ut relevant data. Clunky but it funks
-    JsonElement bigleagueJson = JsonSerializer.Deserialize<JsonElement>(jsonResult);
-    JsonElement standingsJson = bigleagueJson.GetProperty("standings");
-    JsonElement resultsStandingsJson = standingsJson.GetProperty("results");
+    var bigleagueJson = JsonSerializer.Deserialize<JsonElement>(jsonResult);
+    var standingsJson = bigleagueJson.GetProperty("standings");
+    var resultsStandingsJson = standingsJson.GetProperty("results");
 
-    foreach (JsonElement jsonElement in resultsStandingsJson.EnumerateArray())
+    foreach (var jsonElement in resultsStandingsJson.EnumerateArray())
     {
         var player_name = jsonElement.GetProperty("player_name").GetString();
         var totalt_poeng = jsonElement.GetProperty("event_total").GetInt32();
         var lagID = jsonElement.GetProperty("entry").GetInt32();
 
-        Debug.WriteLine(player_name + " : " + totalt_poeng + " og lagID er: " + lagID);
-
-        var playerInLeague = new FantasyLeaguePointsFetcher.Models.Result
+        var playerInLeague = new Result
         {
             player_name = player_name,
             total = totalt_poeng,
@@ -55,24 +52,24 @@ async Task<List<Result>> GetLeagueInfo()
     return fplTeamsInLeagueList;
 }
 
-async Task<List<FantasyLeaguePointsFetcher.Models.Current>> GetPlayerInfo(int lagID)
+async Task<List<Current>> GetPlayerInfo(int lagID)
 {
     //Lager ei tom liste av lag i ligaen
     var fplPlayerList = new List<Current>();
 
-    string apiPlayerHistory = "https://fantasy.premierleague.com/api/entry/" + lagID + "/history/";
+    var apiPlayerHistory = "https://fantasy.premierleague.com/api/entry/" + lagID + "/history/";
     var jsonResult = await ApiCall.DoApiCallAsync(apiPlayerHistory);
 
-    JsonElement PlayerHistory = JsonSerializer.Deserialize<JsonElement>(jsonResult);
-    JsonElement PlayerHistory2 = PlayerHistory.GetProperty("current");
+    var PlayerHistory = JsonSerializer.Deserialize<JsonElement>(jsonResult);
+    var PlayerHistory2 = PlayerHistory.GetProperty("current");
 
-    foreach (JsonElement gwElement in PlayerHistory2.EnumerateArray())
+    foreach (var gwElement in PlayerHistory2.EnumerateArray())
     {
         var gw = gwElement.GetProperty("event").GetInt32();
         var points = gwElement.GetProperty("points").GetInt32();
         var points_on_bench = gwElement.GetProperty("points_on_bench").GetInt32();
 
-        var playerGWs = new FantasyLeaguePointsFetcher.Models.Current
+        var playerGWs = new Current
         {
             @event = gw,
             points = points,
@@ -81,8 +78,6 @@ async Task<List<FantasyLeaguePointsFetcher.Models.Current>> GetPlayerInfo(int la
 
         fplPlayerList.Add(playerGWs);
     }
-
-   
 
     return fplPlayerList;
 }
