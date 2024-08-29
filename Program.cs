@@ -57,7 +57,7 @@ async Task<List<Result>> GetLeagueInfo()
     return fplTeamsInLeagueList;
 }
 
-async Task<List<Current>> GetPlayerInfo(int lagID)
+async Task<List<Current>> GetPlayerInfo(int lagID, string playerName)
 {
     //Lager ei tom liste av lag i ligaen
     var fplPlayerList = new List<Current>();
@@ -78,7 +78,8 @@ async Task<List<Current>> GetPlayerInfo(int lagID)
         {
             @event = gw,
             points = points,
-            points_on_bench = points_on_bench
+            points_on_bench = points_on_bench,
+            playerName = playerName
         };
 
         fplPlayerList.Add(playerGWs);
@@ -93,41 +94,38 @@ try
     var filePath = "C:\\GitHub\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
     using (var package = new ExcelPackage(new FileInfo(filePath)))
     {
-        // --- UTREKNING SHEET --- 
-        var worksheet = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Utrekning");
+        var worksheetUtrekning = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Utrekning");
+        var worksheetGWOversikt = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "GW oversikt");
+        var rowUtrekning = 4; // Start at row 4 in Utrekning table. Cell is defined by GameWeek
 
-        if (worksheet == null)
-            // If the worksheet doesn't exist, create a new one
-            worksheet = package.Workbook.Worksheets.Add("Utrekning");
-
-        var row = 4; // Start at row 4
-        var cells = 3; // Starts at cell 3
 
         // Write data to Utrekning sheet
         foreach (var deltakar in LigaInfo)
         {
             // Write player info for each entry
-            var PlayerInfo = await GetPlayerInfo(deltakar.entry);
-            foreach (var info in PlayerInfo)
+            var playerName = deltakar.player_name;
+            var playerInfo = await GetPlayerInfo(deltakar.entry, playerName);
+
+
+            foreach (var gwInfo in playerInfo)
             {
                 //sets the gameweek as an int for incrementing the gameweeks
-                var gw = info.@event;
-                worksheet.Cells[row, gw + 2].Value = info.points;
+                var gw = gwInfo.@event;
+                worksheetUtrekning.Cells[rowUtrekning, gw + 2].Value = gwInfo.points;
             }
 
-            row++;
+            rowUtrekning++;
         }
 
-        // --- GW Oversikt sheet ---
-
-
-        // Save changes to the existing file
         package.Save();
     }
 
-    Console.WriteLine("Data has been appended to FPL Luster totaloversikt.xlsx");
+    Console.WriteLine("Data has been appended to " + filePath);
 }
 catch (Exception ex)
 {
     Console.WriteLine($"An error occurred: {ex.Message}");
 }
+
+Console.WriteLine("Press the enter key to leave this window");
+Console.ReadLine();

@@ -21,6 +21,7 @@ namespace FantasyLeaguePointsFetcher.Models
         public int event_transfers { get; set; }
         public int event_transfers_cost { get; set; }
         public int points_on_bench { get; set; }
+        public string playerName { get; set; }
     }
 
     public class Past
