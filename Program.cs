@@ -6,6 +6,7 @@ using OfficeOpenXml;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Numerics;
 
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -57,7 +58,7 @@ async Task<List<Result>> GetLeagueInfo()
     return fplTeamsInLeagueList;
 }
 
-async Task<List<Current>> GetPlayerInfo(int lagID, string playerName)
+async Task<List<Current>> GetSpecificPlayerGWInfo(int lagID, string playerName)
 {
     //Lager ei tom liste av lag i ligaen
     var fplPlayerList = new List<Current>();
@@ -94,9 +95,11 @@ try
     var filePath = "C:\\GitHub\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
     using (var package = new ExcelPackage(new FileInfo(filePath)))
     {
+        var playersInformation = new List<PlayerModel>();
+
         var worksheetUtrekning = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Utrekning");
         var worksheetGWOversikt = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "GW oversikt");
-        var rowUtrekning = 4; // Start at row 4 in Utrekning table. Cell is defined by GameWeek
+        var row = 4; // Start at row 4 in Utrekning table. Cell is defined by GameWeek
 
 
         // Write data to Utrekning sheet
@@ -104,17 +107,25 @@ try
         {
             // Write player info for each entry
             var playerName = deltakar.player_name;
-            var playerInfo = await GetPlayerInfo(deltakar.entry, playerName);
+            var playerGWInfo = await GetSpecificPlayerGWInfo(deltakar.entry, playerName);
 
+            var playerModel = new PlayerModel
+            {
+                player_name = playerName,
+                GameweekScores = new Dictionary<int, int>()
+            };
 
-            foreach (var gwInfo in playerInfo)
+            foreach (var gwInfo in playerGWInfo)
             {
                 //sets the gameweek as an int for incrementing the gameweeks
                 var gw = gwInfo.@event;
-                worksheetUtrekning.Cells[rowUtrekning, gw + 2].Value = gwInfo.points;
-            }
+                worksheetUtrekning.Cells[row, gw + 2].Value = gwInfo.points;
 
-            rowUtrekning++;
+                playerModel.GameweekScores[gw] = gwInfo.points;
+
+            }
+            playersInformation.Add(playerModel);
+            row++;
         }
 
         package.Save();

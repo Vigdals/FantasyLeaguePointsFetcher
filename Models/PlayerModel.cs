@@ -8,15 +8,9 @@ namespace FantasyLeaguePointsFetcher.Models
 {
     internal class PlayerModel
     {
-        public int entry { get; set; }
-        public string player_name { get; set; }
-        public string entry_name { get; set;}
-       //public List<GWScores> GWScores { get; set; }
-
-        public class GWScores
-        {
-
-        }
-
+        public int entry { get; set; } //Entry = id
+        public string player_name { get; set; } //Spelarnamn
+        public string entry_name { get; set;} // Lagnamn
+        public Dictionary<int, int> GameweekScores { get; set; } //Multiple gw's and points
     }
 }
