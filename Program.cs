@@ -1,145 +1,170 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
 using FantasyLeaguePointsFetcher.Models;
 using FantasyLeaguePointsFetcher.Resources;
 using OfficeOpenXml;
 
-ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-var LigaInfo = await GetLeagueInfo();
-
-// sort fplPlayerList aplhabetically
-LigaInfo = LigaInfo.OrderBy(p => p.player_name).ToList();
-
-// for kvar deltakar i liga, hent ut GW score
-//foreach (var deltakar in LigaInfo)
-//{
-//    Debug.WriteLine(deltakar.player_name + ":");
-//    // Henter ut GW data for gitt player
-//    var PlayerInfo = await GetPlayerInfo(deltakar.entry);
-
-//    foreach (var info in PlayerInfo) Debug.WriteLine("GW" + info.@event + " " + info.points);
-//}
-
-async Task<List<Result>> GetLeagueInfo()
+public class FantasyLeaguePointsFetcherApp
 {
-    //Lager ei tom liste av lag i ligaen
-    var fplTeamsInLeagueList = new List<Result>();
+    // API URL for the league standings in the Fantasy Premier League
+    private static readonly string ApiLeagueStandingsUrl = "https://fantasy.premierleague.com/api/leagues-classic/1008641/standings/";
 
-    //Hardkoda standings url for Luster FPL
-    var apiLeagueStandings = "https://fantasy.premierleague.com/api/leagues-classic/1008641/standings/";
-    var jsonResult = await ApiCall.DoApiCallAsync(apiLeagueStandings);
+    // Path to the Excel file where the league data will be written
+    private static readonly string ExcelFilePath = "C:\\GitHub\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
 
-    //Deserialiserer json og henter ut relevant data. Clunky but it funks
-    var bigleagueJson = JsonSerializer.Deserialize<JsonElement>(jsonResult);
-    var standingsJson = bigleagueJson.GetProperty("standings");
-    var resultsStandingsJson = standingsJson.GetProperty("results");
-
-    foreach (var jsonElement in resultsStandingsJson.EnumerateArray())
+    // Main method that starts the entire process of fetching and writing league data
+    public async Task Run()
     {
-        var player_name = jsonElement.GetProperty("player_name").GetString();
-        var entry_name = jsonElement.GetProperty("entry_name").GetString();
-        var totalt_poeng = jsonElement.GetProperty("event_total").GetInt32();
-        var lagID = jsonElement.GetProperty("entry").GetInt32();
+        // Required to avoid license issues when working with EPPlus (Excel library)
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
+        // Fetch league information from the Fantasy Premier League API
+        var leagueInfo = await GetLeagueInfo();
 
-        var playerInLeague = new Result
-        {
-            player_name = player_name,
-            entry_name = entry_name,
-            total = totalt_poeng,
-            entry = lagID
-        };
+        // Sort the league information by player name alphabetically
+        leagueInfo = leagueInfo.OrderBy(p => p.player_name).ToList();
 
-        fplTeamsInLeagueList.Add(playerInLeague);
+        // Process the league data and write it to the Excel file
+        await ProcessLeagueData(leagueInfo);
+
+        // Wait for user input before closing the console window
+        Console.WriteLine("Press the enter key to leave this window");
+        Console.ReadLine();
     }
 
-    return fplTeamsInLeagueList;
-}
-
-async Task<List<Current>> GetSpecificPlayerGWInfo(int lagID, string playerName)
-{
-    //Lager ei tom liste av lag i ligaen
-    var fplPlayerList = new List<Current>();
-
-    var apiPlayerHistory = "https://fantasy.premierleague.com/api/entry/" + lagID + "/history/";
-    var jsonResult = await ApiCall.DoApiCallAsync(apiPlayerHistory);
-
-    var PlayerHistory = JsonSerializer.Deserialize<JsonElement>(jsonResult);
-    var PlayerHistory2 = PlayerHistory.GetProperty("current");
-
-    foreach (var gwElement in PlayerHistory2.EnumerateArray())
+    // Method to get information about all players in the league
+    private async Task<List<Result>> GetLeagueInfo()
     {
-        var gw = gwElement.GetProperty("event").GetInt32();
-        var points = gwElement.GetProperty("points").GetInt32();
-        var points_on_bench = gwElement.GetProperty("points_on_bench").GetInt32();
+        // List to store the information of teams/players in the league
+        var fplTeamsInLeagueList = new List<Result>();
 
-        var playerGWs = new Current
+        // Make an API call to fetch the league standings as a JSON string
+        var jsonResult = await ApiCall.DoApiCallAsync(ApiLeagueStandingsUrl);
+
+        // Deserialize the JSON response to extract player information
+        var bigleagueJson = JsonSerializer.Deserialize<JsonElement>(jsonResult);
+        var standingsJson = bigleagueJson.GetProperty("standings");
+        var resultsStandingsJson = standingsJson.GetProperty("results");
+
+        // Loop through each player entry and extract relevant information
+        foreach (var jsonElement in resultsStandingsJson.EnumerateArray())
         {
-            @event = gw,
-            points = points,
-            points_on_bench = points_on_bench,
-            playerName = playerName
-        };
-
-        fplPlayerList.Add(playerGWs);
-    }
-
-    return fplPlayerList;
-}
-
-try
-{
-    // Open the existing workbook
-    var filePath = "C:\\GitHub\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
-    using (var package = new ExcelPackage(new FileInfo(filePath)))
-    {
-        var playersInformation = new List<PlayerModel>();
-
-        var worksheetUtrekning = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Utrekning");
-        var worksheetGWOversikt = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "GW oversikt");
-        var row = 4; // Start at row 4 in Utrekning table. Cell is defined by GameWeek
-
-
-        // Write data to Utrekning sheet
-        foreach (var deltakar in LigaInfo)
-        {
-            // Write player info for each entry
-            var playerName = deltakar.player_name;
-            var entryName = deltakar.entry_name;
-            var playerGWInfo = await GetSpecificPlayerGWInfo(deltakar.entry, playerName);
-
-            var playerModel = new PlayerModel
+            var playerInLeague = new Result
             {
-                player_name = playerName,
-                entry_name = entryName,
-                GameweekScores = new Dictionary<int, int>()
+                player_name = jsonElement.GetProperty("player_name").GetString(),
+                entry_name = jsonElement.GetProperty("entry_name").GetString(),
+                total = jsonElement.GetProperty("event_total").GetInt32(),
+                entry = jsonElement.GetProperty("entry").GetInt32()
             };
 
-            //adding player team name and normal name here:
-            worksheetUtrekning.Cells[row, 1].Value = entryName;
-            worksheetUtrekning.Cells[row, 2].Value = playerName;
-
-            foreach (var gwInfo in playerGWInfo)
-            {
-                //sets the gameweek as an int for incrementing the gameweeks
-                var gw = gwInfo.@event;
-                worksheetUtrekning.Cells[row, gw + 2].Value = gwInfo.points;
-                playerModel.GameweekScores[gw] = gwInfo.points;
-            }
-
-            playersInformation.Add(playerModel);
-            row++;
+            // Add the player information to the list
+            fplTeamsInLeagueList.Add(playerInLeague);
         }
 
-        package.Save();
+        // Return the list of players in the league
+        return fplTeamsInLeagueList;
     }
 
-    Console.WriteLine("Data has been appended to " + filePath);
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"An error occurred: {ex.Message}");
+    // Method to get detailed gameweek information for a specific player
+    private async Task<List<Current>> GetSpecificPlayerGWInfo(int lagID, string playerName)
+    {
+        // List to store gameweek data for the player
+        var fplPlayerList = new List<Current>();
+
+        // Construct the URL to fetch the player's gameweek history
+        var apiPlayerHistory = $"https://fantasy.premierleague.com/api/entry/{lagID}/history/";
+
+        // Make an API call to get the player's gameweek data
+        var jsonResult = await ApiCall.DoApiCallAsync(apiPlayerHistory);
+
+        // Deserialize the JSON response to extract gameweek information
+        var playerHistory = JsonSerializer.Deserialize<JsonElement>(jsonResult);
+        var playerHistoryDetails = playerHistory.GetProperty("current");
+
+        // Loop through each gameweek entry and extract relevant details
+        foreach (var gwElement in playerHistoryDetails.EnumerateArray())
+        {
+            var playerGWs = new Current
+            {
+                @event = gwElement.GetProperty("event").GetInt32(),
+                points = gwElement.GetProperty("points").GetInt32(),
+                points_on_bench = gwElement.GetProperty("points_on_bench").GetInt32(),
+                playerName = playerName
+            };
+
+            // Add the gameweek information to the list
+            fplPlayerList.Add(playerGWs);
+        }
+
+        // Return the list of gameweek information for the player
+        return fplPlayerList;
+    }
+
+    // Method to process the fetched league data and write it to an Excel file
+    private async Task ProcessLeagueData(List<Result> leagueInfo)
+    {
+        try
+        {
+            // Check if the Excel file exists
+            if (!File.Exists(ExcelFilePath))
+            {
+                Console.WriteLine("Excel file not found.");
+                return;
+            }
+
+            // Open the Excel file for editing
+            using (var package = new ExcelPackage(new FileInfo(ExcelFilePath)))
+            {
+                // Get the worksheet where data will be written (Utrekning)
+                var worksheetUtrekning = package.Workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Utrekning");
+                var row = 4; // Start writing data from row 4
+
+                // Loop through each player in the league and fetch their gameweek info
+                foreach (var participant in leagueInfo)
+                {
+                    var playerName = participant.player_name;
+                    var entryName = participant.entry_name;
+
+                    // Fetch gameweek data for the current player
+                    var playerGWInfo = await GetSpecificPlayerGWInfo(participant.entry, playerName);
+
+                    // Write the player's entry name and player name to the Excel file
+                    worksheetUtrekning.Cells[row, 1].Value = entryName;
+                    worksheetUtrekning.Cells[row, 2].Value = playerName;
+
+                    // Loop through each gameweek entry and write the points to the Excel file
+                    foreach (var gwInfo in playerGWInfo)
+                    {
+                        worksheetUtrekning.Cells[row, gwInfo.@event + 2].Value = gwInfo.points;
+                    }
+
+                    row++; // Move to the next row for the next player
+                }
+
+                // Save the changes made to the Excel file
+                package.Save();
+                Console.WriteLine($"Data has been appended to {ExcelFilePath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle any exceptions that may occur during the process
+            Console.WriteLine($"An error occurred: {ex.Message}");
+        }
+    }
 }
 
-Console.WriteLine("Press the enter key to leave this window");
-Console.ReadLine();
+// Entry point for the program
+public class Program
+{
+    public static async Task Main()
+    {
+        // Create an instance of the app and run it
+        var app = new FantasyLeaguePointsFetcherApp();
+        await app.Run();
+    }
+}
