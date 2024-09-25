@@ -1,12 +1,7 @@
-﻿using System.Diagnostics;
-using System.Text.Json;
+﻿using System.Text.Json;
 using FantasyLeaguePointsFetcher.Models;
 using FantasyLeaguePointsFetcher.Resources;
 using OfficeOpenXml;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Numerics;
 
 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -42,12 +37,15 @@ async Task<List<Result>> GetLeagueInfo()
     foreach (var jsonElement in resultsStandingsJson.EnumerateArray())
     {
         var player_name = jsonElement.GetProperty("player_name").GetString();
+        var entry_name = jsonElement.GetProperty("entry_name").GetString();
         var totalt_poeng = jsonElement.GetProperty("event_total").GetInt32();
         var lagID = jsonElement.GetProperty("entry").GetInt32();
+
 
         var playerInLeague = new Result
         {
             player_name = player_name,
+            entry_name = entry_name,
             total = totalt_poeng,
             entry = lagID
         };
@@ -107,23 +105,28 @@ try
         {
             // Write player info for each entry
             var playerName = deltakar.player_name;
+            var entryName = deltakar.entry_name;
             var playerGWInfo = await GetSpecificPlayerGWInfo(deltakar.entry, playerName);
 
             var playerModel = new PlayerModel
             {
                 player_name = playerName,
+                entry_name = entryName,
                 GameweekScores = new Dictionary<int, int>()
             };
+
+            //adding player team name and normal name here:
+            worksheetUtrekning.Cells[row, 1].Value = entryName;
+            worksheetUtrekning.Cells[row, 2].Value = playerName;
 
             foreach (var gwInfo in playerGWInfo)
             {
                 //sets the gameweek as an int for incrementing the gameweeks
                 var gw = gwInfo.@event;
                 worksheetUtrekning.Cells[row, gw + 2].Value = gwInfo.points;
-
                 playerModel.GameweekScores[gw] = gwInfo.points;
-
             }
+
             playersInformation.Add(playerModel);
             row++;
         }
