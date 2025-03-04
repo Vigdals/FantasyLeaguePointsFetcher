@@ -10,16 +10,10 @@ using OfficeOpenXml;
 
 public class FantasyLeaguePointsFetcherApp
 {
-    // API URL for the league standings in the Fantasy Premier League
     private static readonly string ApiLeagueStandingsUrl = "https://fantasy.premierleague.com/api/leagues-classic/1008641/standings/";
-
-    // Path to the Excel file where the league data will be written
     private static readonly string ExcelFilePath = "C:\\GitHub\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
-
-    // Main method that starts the entire process of fetching and writing league data
     public async Task Run()
     {
-        // Required to avoid license issues when working with EPPlus (Excel library)
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         // Fetch league information from the Fantasy Premier League API
