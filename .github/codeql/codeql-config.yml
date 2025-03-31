@@ -1,0 +1,8 @@
+version: 2
+name: "Custom CodeQL Config"
+querySpecs:
+  - query: security-and-quality
+    queryFilters:
+      - exclude:
+          when:
+            severity: [ low, warning ]

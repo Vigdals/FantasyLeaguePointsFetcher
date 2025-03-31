@@ -11,7 +11,7 @@ using OfficeOpenXml;
 public class FantasyLeaguePointsFetcherApp
 {
     private static readonly string ApiLeagueStandingsUrl = "https://fantasy.premierleague.com/api/leagues-classic/1008641/standings/";
-    private static readonly string ExcelFilePath = "C:\\GitHub\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
+    private static readonly string ExcelFilePath = "C:\\Project\\FantasyLeaguePointsFetcher\\FPL Luster totaloversikt.xlsx";
     public async Task Run()
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
