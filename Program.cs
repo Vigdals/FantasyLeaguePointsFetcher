@@ -27,10 +27,6 @@ public class FantasyLeaguePointsFetcherApp
 
         // Process the league data and write it to the Excel file
         await ProcessLeagueData(leagueInfo);
-
-        // Wait for user input before closing the console window
-        Console.WriteLine("Press the enter key to leave this window");
-        Console.ReadLine();
     }
 
     // Method to get information about all players in the league
